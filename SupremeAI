@@ -1,0 +1,96 @@
+# Clone the repository
+git clone https://github.com/your-username/Supreme-AI-Autopilot.git
+
+# Navigate into the repository
+cd Supreme-AI-Autopilot
+
+# Copy your AI files into the repository (Make sure your Python and HTML files are in this folder)
+
+# Initialize Git
+git init
+
+# Add files to GitHub
+git add .
+
+# Commit the changes
+git commit -m "Initial commit - Supreme AI Autopilot"
+
+# Push files to GitHub
+git branch -M main
+git remote add origin https://github.com/your-username/Supreme-AI-Autopilot.git
+git push -u origin main
+from flask import Flask, request, jsonify
+import requests
+import json
+import os
+import sys
+from dotenv import load_dotenv
+
+app = Flask(__name__)
+
+# Load environment variables for security
+load_dotenv()
+SIMPLIFI_API_KEY = os.getenv("SIMPLIFI_API_KEY", "e98ef08b-f05b-4f5e-944e-a84b63eaa917")
+SIMPLIFI_ENDPOINT = "https://api.simpli.fi/data"
+
+# AI Data Processing Storage
+ai_data_store = {}
+
+# Function to retrieve real-time structured/unstructured data from Simpli.fi
+def get_data_from_simplifi(query):
+    if not SIMPLIFI_API_KEY:
+        return {"error": "Missing API Key"}
+    headers = {"Authorization": f"Bearer {SIMPLIFI_API_KEY}", "Content-Type": "application/json"}
+    payload = {"query": query}
+    try:
+        response = requests.post(SIMPLIFI_ENDPOINT, json=payload, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        return {"error": str(e)}
+
+# API Endpoint for AI Data Processing
+@app.route("/process_data", methods=["POST"])
+def process_data():
+    data = request.json
+    industry = data.get("industry")
+    if not industry:
+        return jsonify({"error": "Industry field is required"}), 400
+    insights = get_data_from_simplifi(industry)
+    ai_data_store[industry] = insights
+    return jsonify({"status": "Success", "industry": industry, "data": insights})
+
+# API Endpoint to Retrieve AI Insights
+@app.route("/get_ai_insights", methods=["GET"])
+def get_ai_insights():
+    return jsonify(ai_data_store)
+
+# AI Bot Training System
+@app.route("/train_ai", methods=["POST"])
+def train_ai():
+    data = request.json
+    bot_name = data.get("bot_name")
+    training_data = data.get("training_data")
+    if not bot_name or not training_data:
+        return jsonify({"error": "Both bot_name and training_data are required"}), 400
+    ai_data_store[bot_name] = training_data
+    return jsonify({"status": "Training Complete", "bot": bot_name, "data": training_data})
+
+# Dockerfile for Containerization
+dockerfile_content = """
+FROM python:3.9
+WORKDIR /app
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+CMD ["python", "supreme_ai_autopilot.py"]
+"""
+with open("Dockerfile", "w") as f:
+    f.write(dockerfile_content)
+
+if __name__ == "__main__":
+    try:
+        app.run(host="0.0.0.0", port=5002, debug=True)
+    except Exception as e:
+        print(f"Error starting Flask app: {e}", file=sys.stderr)
+        sys.exit(1)

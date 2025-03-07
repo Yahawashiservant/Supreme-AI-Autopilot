@@ -94,5 +94,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error starting Flask app: {e}", file=sys.stderr)
         sys.exit(1)
-SupremeAI
-
